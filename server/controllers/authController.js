@@ -3,23 +3,26 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 
+// Cookie options: SameSite=None + Secure required for cross-origin (e.g. Vercel frontend → Render backend)
+const cookieOptions = (overrides = {}) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    return {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'strict', // 'none' so browser sends cookie cross-origin
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        ...overrides
+    };
+};
+
 /**
  * Generate JWT token and set it as HTTP-only cookie
- * @param {Object} res - Express response object
- * @param {String} userId - User ID
- * @param {String} role - User role
  */
 const generateToken = (res, userId, role) => {
     const token = jwt.sign({ userId, role }, process.env.JWT_SECRET, {
         expiresIn: '30d'
     });
-
-    res.cookie('jwt', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        sameSite: 'strict', // Prevent CSRF
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-    });
+    res.cookie('jwt', token, cookieOptions());
 };
 
 /**
@@ -129,10 +132,7 @@ const loginUser = async (req, res) => {
 };
 
 const logoutUser = (req, res) => {
-    res.cookie('jwt', '', {
-        httpOnly: true,
-        expires: new Date(0)
-    });
+    res.cookie('jwt', '', cookieOptions({ maxAge: 0, expires: new Date(0) }));
     res.status(200).json({ message: 'Logged out successfully' });
 };
 
