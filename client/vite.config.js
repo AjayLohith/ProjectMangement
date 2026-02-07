@@ -16,13 +16,7 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         sourcemap: false,
-        minify: 'terser',
-        terserOptions: {
-            compress: {
-                drop_console: true,
-                drop_debugger: true,
-            },
-        },
+        minify: 'esbuild', // Use default esbuild (terser requires extra plugin)
     },
     define: {
         'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
