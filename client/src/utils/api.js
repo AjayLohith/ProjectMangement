@@ -22,18 +22,13 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor for error handling
+// Response interceptor: on 401, signal logout so AuthContext can redirect via React Router (no full page refresh)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response) {
-            // Server responded with error
-            if (error.response.status === 401) {
-                // Unauthorized - redirect to login
-                window.location.href = '/login';
-            }
+        if (error.response?.status === 401) {
+            window.dispatchEvent(new CustomEvent('auth:logout'));
         } else if (error.request) {
-            // Request made but no response
             error.message = 'Network error. Please check your connection.';
         }
         return Promise.reject(error);
