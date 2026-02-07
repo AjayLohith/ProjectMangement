@@ -24,21 +24,18 @@ const ProjectDetails = () => {
                 const projRes = await api.get(`/projects/${id}`);
                 setProject(projRes.data);
 
-                // Get documents for this project
                 const docsRes = await api.get(`/documents/project/${id}`);
-                setDocuments(docsRes.data);
+                setDocuments(Array.isArray(docsRes.data) ? docsRes.data : []);
 
-                // Fetch all developers for assignment dropdown (Admin/Lead only)
-                if (user.role === 'admin' || (projRes.data.lead && (projRes.data.lead._id === user._id || projRes.data.lead === user._id))) {
+                if (user?.role === 'admin' || (projRes.data?.lead && (projRes.data.lead._id === user._id || projRes.data.lead === user._id))) {
                     try {
                         const usersRes = await api.get('/auth/users');
-                        const developers = usersRes.data.filter(u => u.role === 'developer');
+                        const list = Array.isArray(usersRes.data) ? usersRes.data : [];
+                        const developers = list.filter(u => u.role === 'developer');
                         setAllDevelopers(developers);
-                        
-                        // Pre-select currently assigned developers
-                        if (projRes.data.assignedDevelopers) {
-                            const assignedIds = projRes.data.assignedDevelopers.map(dev => dev._id || dev);
-                            setSelectedDevIds(assignedIds);
+                        const devs = projRes.data?.assignedDevelopers;
+                        if (Array.isArray(devs)) {
+                            setSelectedDevIds(devs.map(dev => dev._id || dev));
                         }
                     } catch (error) {
                         console.error('Failed to fetch developers', error);
@@ -46,9 +43,8 @@ const ProjectDetails = () => {
                 }
             } catch (error) {
                 console.error("Error fetching project data", error);
-                if (error.response?.status === 404 || error.response?.status === 403) {
-                    setProject(null);
-                }
+                setProject(null);
+                setDocuments([]);
             } finally {
                 setLoading(false);
             }
@@ -70,7 +66,7 @@ const ProjectDetails = () => {
             });
             // Refresh documents
             const docsRes = await api.get(`/documents/project/${id}`);
-            setDocuments(docsRes.data);
+            setDocuments(Array.isArray(docsRes.data) ? docsRes.data : []);
             setFile(null);
         } catch (error) {
             alert('Upload failed: ' + (error.response?.data?.message || error.message));
@@ -118,10 +114,12 @@ const ProjectDetails = () => {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
-    if (!project) return <div>Project not found or access denied.</div>;
+    if (loading) return <div className="p-8 text-white">Loading...</div>;
+    if (!project) return <div className="p-8 text-white">Project not found or access denied.</div>;
 
-    const canUpload = user.role === 'admin' || (user.role === 'project_lead' && (project.lead._id === user._id || project.lead === user._id));
+    const assignedDevs = Array.isArray(project.assignedDevelopers) ? project.assignedDevelopers : [];
+    const safeDocuments = Array.isArray(documents) ? documents : [];
+    const canUpload = user?.role === 'admin' || (user?.role === 'project_lead' && (project.lead?._id === user._id || project.lead === user._id));
     const canAssign = canUpload; // Same permissions roughly
 
     return (
@@ -138,8 +136,8 @@ const ProjectDetails = () => {
                 <div className="mt-4">
                     <h4 className="font-bold">Assigned Developers:</h4>
                     <div className="flex gap-2 mt-2">
-                        {project.assignedDevelopers && project.assignedDevelopers.length > 0 ? (
-                            project.assignedDevelopers.map(dev => (
+                        {assignedDevs.length > 0 ? (
+                            assignedDevs.map(dev => (
                                 <span key={dev._id || dev} className="bg-blue-900 px-2 py-1 rounded text-xs">{dev.username || dev}</span>
                             ))
                         ) : (
@@ -155,10 +153,10 @@ const ProjectDetails = () => {
                     <h3 className="text-xl font-bold mb-4">Assign Developers</h3>
                     <form onSubmit={handleAssignDev} className="space-y-4">
                         <div className="max-h-48 overflow-y-auto border border-gray-600 rounded p-3 bg-gray-700">
-                            {allDevelopers.length === 0 ? (
+                            {(Array.isArray(allDevelopers) ? allDevelopers : []).length === 0 ? (
                                 <p className="text-gray-400 text-sm">No developers available</p>
                             ) : (
-                                allDevelopers.map(dev => (
+                                (Array.isArray(allDevelopers) ? allDevelopers : []).map(dev => (
                                     <label key={dev._id} className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-600 px-2 rounded">
                                         <input
                                             type="checkbox"
@@ -187,8 +185,8 @@ const ProjectDetails = () => {
                 <div className="bg-gray-800 p-6 rounded shadow-lg text-white">
                     <h3 className="text-xl font-bold mb-4">Project Documents</h3>
                     <div className="space-y-2">
-                        {documents.length === 0 && <p className="text-gray-500">No documents uploaded.</p>}
-                        {documents.map(doc => (
+                        {safeDocuments.length === 0 && <p className="text-gray-500">No documents uploaded.</p>}
+                        {safeDocuments.map(doc => (
                             <div key={doc._id} className="flex justify-between items-center bg-gray-700 p-2 rounded">
                                 <div>
                                     <p className="font-bold text-sm">{doc.originalName}</p>

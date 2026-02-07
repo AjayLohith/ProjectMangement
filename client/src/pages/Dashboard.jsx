@@ -15,6 +15,7 @@ const Dashboard = () => {
     const [allUsers, setAllUsers] = useState([]); // All users for admin
 
     useEffect(() => {
+        if (!user) return;
         fetchProjects();
         if (user.role === 'admin') {
             fetchAllUsers();
@@ -24,27 +25,29 @@ const Dashboard = () => {
     const fetchAllUsers = async () => {
         try {
             const { data } = await api.get('/auth/users');
-            setAllUsers(data);
-            // Filter to only project leads and admins for lead dropdown
-            setLeads(data.filter(u => u.role === 'project_lead' || u.role === 'admin'));
+            const users = Array.isArray(data) ? data : [];
+            setAllUsers(users);
+            setLeads(users.filter(u => u.role === 'project_lead' || u.role === 'admin'));
         } catch (error) {
             console.error('Failed to fetch users', error);
+            setAllUsers([]);
+            setLeads([]);
         }
     };
 
     const fetchProjects = async () => {
+        if (!user) return;
         try {
             setLoading(true);
-            // Logic differs by role
             let endpoint = '/projects';
             if (user.role === 'developer') {
                 endpoint = '/projects/my-assignments';
             }
             const { data } = await api.get(endpoint);
-            setProjects(data);
+            setProjects(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to fetch projects", error);
-            // Show user-friendly error
+            setProjects([]);
         } finally {
             setLoading(false);
         }
@@ -88,6 +91,11 @@ const Dashboard = () => {
         );
     }
 
+    if (!user) return null;
+
+    const safeProjects = Array.isArray(projects) ? projects : [];
+    const safeLeads = Array.isArray(leads) ? leads : [];
+
     return (
         <div className="container mx-auto p-6">
             <h2 className="text-3xl text-white font-bold mb-6">Dashboard ({user.role})</h2>
@@ -99,8 +107,8 @@ const Dashboard = () => {
                         {user.role === 'developer' ? 'My Assigned Projects' : 'Active Projects'}
                     </h3>
                     <div className="space-y-4">
-                        {projects.length === 0 && <p className="text-gray-400">No projects found.</p>}
-                        {projects.map((project) => (
+                        {safeProjects.length === 0 && <p className="text-gray-400">No projects found.</p>}
+                        {safeProjects.map((project) => (
                             <div key={project._id} className="bg-gray-800 p-4 rounded shadow border border-gray-700 hover:border-blue-500 transition">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -166,7 +174,7 @@ const Dashboard = () => {
                                     required
                                 >
                                     <option value="">Select Project Lead</option>
-                                    {leads.map(lead => (
+                                    {safeLeads.map(lead => (
                                         <option key={lead._id} value={lead._id}>
                                             {lead.username} ({lead.role})
                                         </option>

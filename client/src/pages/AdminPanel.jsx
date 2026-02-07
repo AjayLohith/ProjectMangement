@@ -28,9 +28,10 @@ const AdminPanel = () => {
     const fetchAllUsers = async () => {
         try {
             const { data } = await api.get('/auth/users');
-            setAllUsers(data);
+            setAllUsers(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch users', error);
+            setAllUsers([]);
         }
     };
 
@@ -136,7 +137,7 @@ const AdminPanel = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {allUsers.map((u) => (
+                            {(Array.isArray(allUsers) ? allUsers : []).map((u) => (
                                 <tr key={u._id} className="border-b border-gray-700">
                                     <td className="p-2 text-white">{u.username}</td>
                                     <td className="p-2">
