@@ -9,10 +9,10 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Rate limiting for authentication endpoints
+// Rate limiting for authentication endpoints (allows retries + MFA flow)
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 requests per windowMs
+    max: 30, // 30 attempts per 15 min per IP (was 5; too strict for demo/production)
     message: 'Too many login attempts, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
